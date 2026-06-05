@@ -61,6 +61,7 @@ keystore.properties
 .claude/
 .agents/
 skills-lock.json
+claude.md
 
 # ---------------------------------------------------------------------
 # Sistema operativo
