@@ -1,6 +1,7 @@
 package com.example.foodboxd.ui.top
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -47,7 +48,8 @@ import com.example.foodboxd.ui.theme.YellowPrimary
 @Composable
 fun TopRestaurantsScreen(
     modifier: Modifier = Modifier,
-    viewModel: TopRestaurantsViewModel = viewModel()
+    viewModel: TopRestaurantsViewModel = viewModel(),
+    onRestaurantClick: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -99,7 +101,8 @@ fun TopRestaurantsScreen(
                             time = restaurant.deliveryTime,
                             location = restaurant.location,
                             price = restaurant.priceRange,
-                            hasPromo = restaurant.hasPromo
+                            hasPromo = restaurant.hasPromo,
+                            onClick = onRestaurantClick
                         )
                     }
                 }
@@ -154,12 +157,14 @@ fun TopRestaurantCard(
     time: String,
     location: String,
     price: String,
-    hasPromo: Boolean
+    hasPromo: Boolean,
+    onClick: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {

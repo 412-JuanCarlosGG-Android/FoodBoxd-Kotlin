@@ -82,10 +82,14 @@ fun MainScreen() {
             startDestination = "top",
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable("home") { PlaceholderScreen("Inicio (En desarrollo por el equipo)") }
-            composable("top") { TopRestaurantsScreen() }
-            composable("search") { PlaceholderScreen("Buscar (En desarrollo por el equipo)") }
-            composable("favorites") { PlaceholderScreen("Favoritos (En desarrollo por el equipo)") }
+            composable("home") { PlaceholderScreen("Inicio") }
+            composable("top") {
+                TopRestaurantsScreen(
+                    onRestaurantClick = { navController.navigate("detail") }
+                )
+            }
+            composable("search") { PlaceholderScreen("Buscar") }
+            composable("favorites") { PlaceholderScreen("Favoritos") }
             composable("profile") { ProfileScreen() }
             composable("detail") { RestaurantDetailScreen() }
         }
