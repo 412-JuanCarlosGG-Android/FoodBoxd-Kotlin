@@ -14,16 +14,22 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,12 +38,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.foodboxd.model.UiState
 import com.example.foodboxd.ui.theme.FoodboxdTheme
 import com.example.foodboxd.ui.theme.Neutral950
 import com.example.foodboxd.ui.theme.YellowPrimary
 
 @Composable
-fun TopRestaurantsScreen(modifier: Modifier = Modifier) {
+fun TopRestaurantsScreen(
+    modifier: Modifier = Modifier,
+    viewModel: TopRestaurantsViewModel = viewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -45,23 +58,51 @@ fun TopRestaurantsScreen(modifier: Modifier = Modifier) {
     ) {
         TopRestaurantsHeader()
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = 16.dp, bottom = 24.dp)
-        ) {
-            items(5) { index ->
-                val rank = index + 1
-                TopRestaurantCard(
-                    rank = rank,
-                    name = "Nombre del Restaurante",
-                    category = "Categoría",
-                    rating = "4.${9 - index}",
-                    reviews = "(XXX)",
-                    time = "XX-XX min",
-                    location = "Dirección estandarizada de prueba",
-                    price = if (rank % 2 == 0) "$$" else "$$$",
-                    hasPromo = rank <= 3
-                )
+        when (val state = uiState) {
+            is UiState.Loading -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = YellowPrimary)
+                }
+            }
+            is UiState.Error -> {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(text = state.message, color = Color.Red)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = { viewModel.fetchTopRestaurants() },
+                            colors = ButtonDefaults.buttonColors(containerColor = YellowPrimary)
+                        ) {
+                            Text("Reintentar", color = Neutral950, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+            is UiState.Success -> {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(top = 16.dp, bottom = 24.dp)
+                ) {
+                    items(state.data) { restaurant ->
+                        TopRestaurantCard(
+                            rank = restaurant.rank,
+                            name = restaurant.name,
+                            category = restaurant.category,
+                            rating = restaurant.rating.toString(),
+                            reviews = "(${restaurant.reviewCount})",
+                            time = restaurant.deliveryTime,
+                            location = restaurant.location,
+                            price = restaurant.priceRange,
+                            hasPromo = restaurant.hasPromo
+                        )
+                    }
+                }
             }
         }
     }
