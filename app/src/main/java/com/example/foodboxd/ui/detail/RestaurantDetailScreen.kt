@@ -1,6 +1,8 @@
 package com.example.foodboxd.ui.detail
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,14 +20,26 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,6 +49,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.foodboxd.ui.theme.FoodboxdTheme
+import com.example.foodboxd.ui.theme.Neutral950
 import com.example.foodboxd.ui.theme.YellowPrimary
 
 @Composable
@@ -149,7 +164,144 @@ fun RestaurantDetailScreen(modifier: Modifier = Modifier) {
                 }
             }
 
+            Spacer(modifier = Modifier.height(32.dp))
+
+            ReviewInputArea()
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Text(
+                text = "Reseñas (X)",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            ReviewListItem(
+                initials = "MG",
+                name = "Nombre Apellido",
+                date = "DD MMM",
+                rating = 5,
+                comment = "Excelente comida y servicio. Texto de prueba estandarizado para verificar el comportamiento de múltiples líneas."
+            )
+            ReviewListItem(
+                initials = "CM",
+                name = "Nombre Apellido",
+                date = "DD MMM",
+                rating = 4,
+                comment = "Muy buena experiencia. Los precios son justos y las porciones son adecuadas."
+            )
         }
+    }
+}
+
+@Composable
+fun ReviewInputArea() {
+    var rating by remember { mutableIntStateOf(0) }
+    var comment by remember { mutableStateOf("") }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color(0xFFFFF9D6)) // Fondo amarillo muy clarito
+            .border(1.dp, YellowPrimary.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+            .padding(16.dp)
+    ) {
+        Column {
+            Text(text = "Deja tu reseña", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Row {
+                for (i in 1..5) {
+                    Icon(
+                        imageVector = if (i <= rating) Icons.Default.Star else Icons.Outlined.Star,
+                        contentDescription = "Star $i",
+                        tint = if (i <= rating) YellowPrimary else Color.Gray,
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clickable { rating = i }
+                            .padding(end = 4.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedTextField(
+                value = comment,
+                onValueChange = { comment = it },
+                placeholder = { Text("Escribe tu comentario sobre este restaurante...", color = Color.Gray) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(100.dp)
+                    .background(Color.White, RoundedCornerShape(8.dp)),
+                colors = OutlinedTextFieldDefaults.colors(
+                    unfocusedBorderColor = Color.LightGray,
+                    focusedBorderColor = YellowPrimary
+                )
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Button(
+                onClick = { },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = YellowPrimary),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Icon(imageVector = Icons.AutoMirrored.Filled.Send, contentDescription = "Enviar", tint = Neutral950, modifier = Modifier.size(18.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(text = "Publicar reseña", color = Neutral950, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+fun ReviewListItem(initials: String, name: String, date: String, rating: Int, comment: String) {
+    Column(modifier = Modifier.padding(bottom = 16.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(YellowPrimary),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = initials, fontWeight = FontWeight.Bold, color = Neutral950)
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column {
+                    Text(text = name, fontWeight = FontWeight.Bold)
+                    Row {
+                        repeat(5) { index ->
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = null,
+                                tint = if (index < rating) YellowPrimary else Color.LightGray,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                    }
+                }
+            }
+            Text(text = date, color = Color.Gray, fontSize = 12.sp)
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(text = comment, color = Color.DarkGray, style = MaterialTheme.typography.bodyMedium)
+        Spacer(modifier = Modifier.height(12.dp))
+        HorizontalDivider(color = Color(0xFFEEEEEE), thickness = 1.dp)
     }
 }
 
