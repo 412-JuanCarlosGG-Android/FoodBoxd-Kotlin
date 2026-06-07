@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,6 +26,7 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -34,6 +36,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -166,6 +169,16 @@ fun RestaurantDetailScreen(modifier: Modifier = Modifier) {
 
             Spacer(modifier = Modifier.height(32.dp))
 
+            Text(
+                text = "Menú",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            RestaurantMenuGallery()
+
+            Spacer(modifier = Modifier.height(32.dp))
+
             ReviewInputArea()
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -197,15 +210,60 @@ fun RestaurantDetailScreen(modifier: Modifier = Modifier) {
 }
 
 @Composable
+fun RestaurantMenuGallery() {
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        items(5) {
+            Box(
+                modifier = Modifier
+                    .size(120.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFFE0E0E0)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Star,
+                    contentDescription = "Foto de platillo",
+                    tint = Color.Gray,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun ReviewInputArea() {
     var rating by remember { mutableIntStateOf(0) }
     var comment by remember { mutableStateOf("") }
+    var showDialog by remember { mutableStateOf(false) }
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text(text = "¡Gracias por tu reseña!") },
+            text = { Text(text = "Tu comentario ha sido publicado exitosamente.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDialog = false
+                        rating = 0
+                        comment = ""
+                    }
+                ) {
+                    Text("Aceptar", color = Neutral950, fontWeight = FontWeight.Bold)
+                }
+            },
+            containerColor = Color.White
+        )
+    }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFFFFF9D6)) // Fondo amarillo muy clarito
+            .background(Color(0xFFFFF9D6))
             .border(1.dp, YellowPrimary.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
             .padding(16.dp)
     ) {
@@ -247,7 +305,11 @@ fun ReviewInputArea() {
             Spacer(modifier = Modifier.height(12.dp))
 
             Button(
-                onClick = { },
+                onClick = {
+                    if (rating > 0 && comment.isNotBlank()) {
+                        showDialog = true
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = YellowPrimary),
                 shape = RoundedCornerShape(8.dp)
