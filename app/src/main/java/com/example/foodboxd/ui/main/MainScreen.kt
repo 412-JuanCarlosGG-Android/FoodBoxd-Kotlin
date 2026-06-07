@@ -17,28 +17,32 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.foodboxd.ui.theme.FoodboxdTheme
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import com.example.foodboxd.ui.detail.RestaurantDetailScreen
+import com.example.foodboxd.ui.profile.ProfileScreen
 import com.example.foodboxd.ui.theme.Neutral950
 import com.example.foodboxd.ui.theme.YellowPrimary
+import com.example.foodboxd.ui.top.TopRestaurantsScreen
 
 @Composable
 fun MainScreen() {
-    var selectedItem by remember { mutableIntStateOf(4) }
+    val navController = rememberNavController()
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
 
-    val items = listOf("Inicio", "Top", "Buscar", "Favoritos", "Perfil")
-    val icons = listOf(
-        Icons.Default.Home,
-        Icons.Default.Star,
-        Icons.Default.Search,
-        Icons.Default.Favorite,
-        Icons.Default.Person
+    val items = listOf(
+        Triple("home", "Inicio", Icons.Default.Home),
+        Triple("top", "Top", Icons.Default.Star),
+        Triple("search", "Buscar", Icons.Default.Search),
+        Triple("favorites", "Favoritos", Icons.Default.Favorite),
+        Triple("profile", "Perfil", Icons.Default.Person)
     )
 
     Scaffold(
@@ -47,12 +51,20 @@ fun MainScreen() {
                 containerColor = Color.White,
                 contentColor = Neutral950
             ) {
-                items.forEachIndexed { index, item ->
+                items.forEach { (route, title, icon) ->
                     NavigationBarItem(
-                        icon = { Icon(icons[index], contentDescription = item) },
-                        label = { Text(item) },
-                        selected = selectedItem == index,
-                        onClick = { selectedItem = index },
+                        icon = { Icon(icon, contentDescription = title) },
+                        label = { Text(title) },
+                        selected = currentRoute == route,
+                        onClick = {
+                            navController.navigate(route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
                         colors = NavigationBarItemDefaults.colors(
                             selectedIconColor = Neutral950,
                             selectedTextColor = YellowPrimary,
@@ -65,21 +77,24 @@ fun MainScreen() {
             }
         }
     ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .padding(innerPadding)
-                .fillMaxSize(),
-            contentAlignment = Alignment.Center
+        NavHost(
+            navController = navController,
+            startDestination = "top",
+            modifier = Modifier.padding(innerPadding)
         ) {
-            Text("Estás en la pantalla: ${items[selectedItem]}")
+            composable("home") { PlaceholderScreen("Inicio (En desarrollo por el equipo)") }
+            composable("top") { TopRestaurantsScreen() }
+            composable("search") { PlaceholderScreen("Buscar (En desarrollo por el equipo)") }
+            composable("favorites") { PlaceholderScreen("Favoritos (En desarrollo por el equipo)") }
+            composable("profile") { ProfileScreen() }
+            composable("detail") { RestaurantDetailScreen() }
         }
     }
 }
 
-@Preview(showBackground = true)
 @Composable
-fun MainScreenPreview() {
-    FoodboxdTheme {
-        MainScreen()
+fun PlaceholderScreen(title: String) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text(text = title, color = Color.Gray)
     }
 }
