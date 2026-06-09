@@ -79,7 +79,7 @@ fun MainScreen() {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = "top",
+            startDestination = "home",
             modifier = Modifier.padding(innerPadding)
         ) {
             composable("home") { PlaceholderScreen("Inicio") }
