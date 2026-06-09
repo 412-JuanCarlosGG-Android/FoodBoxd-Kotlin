@@ -26,6 +26,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.foodboxd.ui.detail.RestaurantDetailScreen
+import com.example.foodboxd.ui.home.HomeScreen
 import com.example.foodboxd.ui.profile.ProfileScreen
 import com.example.foodboxd.ui.theme.Neutral950
 import com.example.foodboxd.ui.theme.YellowPrimary
@@ -82,7 +83,20 @@ fun MainScreen() {
             startDestination = "home",
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable("home") { PlaceholderScreen("Inicio") }
+            composable("home") {
+                HomeScreen(
+                    onRestaurantClick = { navController.navigate("detail") },
+                    onSeeAllClick = {
+                        navController.navigate("top") {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                )
+            }
             composable("top") {
                 TopRestaurantsScreen(
                     onRestaurantClick = { navController.navigate("detail") }
