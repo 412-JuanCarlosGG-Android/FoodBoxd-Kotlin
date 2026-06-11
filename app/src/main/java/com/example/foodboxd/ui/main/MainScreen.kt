@@ -26,6 +26,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.foodboxd.ui.detail.RestaurantDetailScreen
+import com.example.foodboxd.ui.favorites.FavoritesScreen
 import com.example.foodboxd.ui.home.HomeScreen
 import com.example.foodboxd.ui.profile.ProfileScreen
 import com.example.foodboxd.ui.search.SearchScreen
@@ -104,7 +105,7 @@ fun MainScreen() {
                 )
             }
             composable("search") { SearchScreen() }
-            composable("favorites") { PlaceholderScreen("Favoritos") }
+            composable("favorites") { FavoritesScreen() }
             composable("profile") { ProfileScreen() }
             composable("detail") { RestaurantDetailScreen() }
         }
