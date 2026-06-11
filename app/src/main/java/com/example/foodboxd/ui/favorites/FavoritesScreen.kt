@@ -21,67 +21,88 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.foodboxd.ui.theme.FoodboxdTheme
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.foodboxd.model.Restaurant
+import com.example.foodboxd.model.UiState
+import com.example.foodboxd.ui.components.OnResume
+import com.example.foodboxd.ui.components.RestaurantImage
 import com.example.foodboxd.ui.theme.Neutral950
 import com.example.foodboxd.ui.theme.YellowPrimary
 
-private data class FavoriteRestaurant(
-    val name: String,
-    val category: String,
-    val rating: String,
-    val priceRange: String,
-    val deliveryTime: String,
-    val location: String,
-    val hasPromo: Boolean = false
-)
-
-private val initialFavorites = listOf(
-    FavoriteRestaurant("La Trattoria", "Italiana", "4.8", "$$", "20-30 min", "Centro Histórico"),
-    FavoriteRestaurant("Sushi Zen", "Japonesa", "4.7", "$$$", "25-40 min", "Polanco"),
-    FavoriteRestaurant("El Asador", "Argentina", "4.9", "$$$", "20-30 min", "Lomas", hasPromo = true),
-    FavoriteRestaurant("Green Garden", "Vegana", "4.6", "$$", "20-35 min", "Condesa"),
-)
-
 @Composable
-fun FavoritesScreen(modifier: Modifier = Modifier) {
-    val favorites = remember { mutableStateListOf(*initialFavorites.toTypedArray()) }
+fun FavoritesScreen(
+    modifier: Modifier = Modifier,
+    viewModel: FavoritesViewModel = viewModel(),
+    onRestaurantClick: (String) -> Unit = {}
+) {
+    val uiState by viewModel.uiState.collectAsState()
+
+    // Refresca al volver a la pestaña (p. ej. tras marcar un favorito en el detalle).
+    OnResume { viewModel.fetchFavorites(silent = true) }
 
     Column(
         modifier = modifier
             .fillMaxSize()
             .background(Color.White)
     ) {
-        FavoritesHeader(count = favorites.size)
+        val count = (uiState as? UiState.Success)?.data?.size ?: 0
+        FavoritesHeader(count = count)
 
-        if (favorites.isEmpty()) {
-            FavoritesEmptyState()
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp)
-            ) {
-                items(favorites, key = { it.name }) { restaurant ->
-                    FavoriteRestaurantCard(
-                        restaurant = restaurant,
-                        onRemove = { favorites.remove(restaurant) }
-                    )
+        when (val state = uiState) {
+            is UiState.Loading -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = YellowPrimary)
+                }
+            }
+            is UiState.Error -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(text = state.message, color = Color.Red)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = { viewModel.fetchFavorites() },
+                            colors = ButtonDefaults.buttonColors(containerColor = YellowPrimary)
+                        ) {
+                            Text("Reintentar", color = Neutral950, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+            is UiState.Success -> {
+                if (state.data.isEmpty()) {
+                    FavoritesEmptyState()
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp)
+                    ) {
+                        items(state.data, key = { it.id }) { restaurant ->
+                            FavoriteRestaurantCard(
+                                restaurant = restaurant,
+                                onClick = { onRestaurantClick(restaurant.id) },
+                                onRemove = { viewModel.removeFavorite(restaurant.id) }
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -151,14 +172,15 @@ private fun FavoritesEmptyState() {
 
 @Composable
 private fun FavoriteRestaurantCard(
-    restaurant: FavoriteRestaurant,
+    restaurant: Restaurant,
+    onClick: () -> Unit,
     onRemove: () -> Unit
 ) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
-            .clickable { },
+            .clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -171,8 +193,12 @@ private fun FavoriteRestaurantCard(
                 modifier = Modifier
                     .size(72.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color.LightGray)
             ) {
+                RestaurantImage(
+                    url = restaurant.imageUrl,
+                    contentDescription = restaurant.name,
+                    modifier = Modifier.fillMaxSize()
+                )
                 if (restaurant.hasPromo) {
                     Box(
                         modifier = Modifier
@@ -236,7 +262,7 @@ private fun FavoriteRestaurantCard(
                         modifier = Modifier.size(14.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = restaurant.rating, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text(text = restaurant.rating.toString(), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(text = "• 🕒 ${restaurant.deliveryTime}", color = Color.Gray, fontSize = 12.sp)
                 }
@@ -254,29 +280,6 @@ private fun FavoriteRestaurantCard(
                     Text(text = restaurant.location, color = Color.Gray, fontSize = 12.sp, maxLines = 1)
                 }
             }
-        }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun FavoritesScreenPreview() {
-    FoodboxdTheme {
-        FavoritesScreen()
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun FavoritesEmptyPreview() {
-    FoodboxdTheme {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.White)
-        ) {
-            FavoritesHeader(count = 0)
-            FavoritesEmptyState()
         }
     }
 }

@@ -41,6 +41,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.foodboxd.model.UiState
+import com.example.foodboxd.ui.components.OnResume
+import com.example.foodboxd.ui.components.RestaurantImage
 import com.example.foodboxd.ui.theme.FoodboxdTheme
 import com.example.foodboxd.ui.theme.Neutral950
 import com.example.foodboxd.ui.theme.YellowPrimary
@@ -49,9 +51,12 @@ import com.example.foodboxd.ui.theme.YellowPrimary
 fun TopRestaurantsScreen(
     modifier: Modifier = Modifier,
     viewModel: TopRestaurantsViewModel = viewModel(),
-    onRestaurantClick: () -> Unit = {}
+    onRestaurantClick: (String) -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    // Refresca el ranking al volver (refleja nuevas reseñas/calificaciones).
+    OnResume { viewModel.fetchTopRestaurants(silent = true) }
 
     Column(
         modifier = modifier
@@ -102,7 +107,8 @@ fun TopRestaurantsScreen(
                             location = restaurant.location,
                             price = restaurant.priceRange,
                             hasPromo = restaurant.hasPromo,
-                            onClick = onRestaurantClick
+                            imageUrl = restaurant.imageUrl,
+                            onClick = { onRestaurantClick(restaurant.id) }
                         )
                     }
                 }
@@ -158,6 +164,7 @@ fun TopRestaurantCard(
     location: String,
     price: String,
     hasPromo: Boolean,
+    imageUrl: String = "",
     onClick: () -> Unit = {}
 ) {
     Card(
@@ -174,11 +181,12 @@ fun TopRestaurantCard(
                 .padding(12.dp)
         ) {
             Box {
-                Box(
+                RestaurantImage(
+                    url = imageUrl,
+                    contentDescription = name,
                     modifier = Modifier
                         .size(80.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color.LightGray)
                 )
 
                 val badgeColor = when (rank) {

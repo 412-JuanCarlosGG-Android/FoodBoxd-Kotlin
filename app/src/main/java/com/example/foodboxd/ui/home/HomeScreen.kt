@@ -46,6 +46,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.foodboxd.model.Restaurant
 import com.example.foodboxd.model.Review
 import com.example.foodboxd.model.UiState
+import com.example.foodboxd.ui.components.OnResume
+import com.example.foodboxd.ui.components.RestaurantImage
 import com.example.foodboxd.ui.theme.FoodboxdTheme
 import com.example.foodboxd.ui.theme.Neutral950
 import com.example.foodboxd.ui.theme.YellowPrimary
@@ -54,10 +56,13 @@ import com.example.foodboxd.ui.theme.YellowPrimary
 fun HomeScreen(
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = viewModel(),
-    onRestaurantClick: () -> Unit = {},
+    onRestaurantClick: (String) -> Unit = {},
     onSeeAllClick: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    // Refresca al volver al inicio (p. ej. tras publicar una reseña).
+    OnResume { viewModel.fetchHome(silent = true) }
 
     Column(
         modifier = modifier
@@ -147,7 +152,7 @@ private fun HomeHeader() {
 @Composable
 private fun HomeContentList(
     content: HomeContent,
-    onRestaurantClick: () -> Unit,
+    onRestaurantClick: (String) -> Unit,
     onSeeAllClick: () -> Unit
 ) {
     LazyColumn(
@@ -171,7 +176,7 @@ private fun HomeContentList(
                 items(content.featured) { restaurant ->
                     FeaturedRestaurantCard(
                         restaurant = restaurant,
-                        onClick = onRestaurantClick
+                        onClick = { onRestaurantClick(restaurant.id) }
                     )
                 }
             }
@@ -246,8 +251,12 @@ private fun FeaturedRestaurantCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(120.dp)
-                    .background(Color.LightGray)
             ) {
+                RestaurantImage(
+                    url = restaurant.imageUrl,
+                    contentDescription = restaurant.name,
+                    modifier = Modifier.fillMaxSize()
+                )
                 if (restaurant.hasPromo) {
                     Box(
                         modifier = Modifier

@@ -13,6 +13,14 @@ data class Restaurant(
     val hasPromo: Boolean,
     val promoDescription: String? = null,
     val description: String,
+    val imageUrl: String,
+    val menuItems: List<MenuItem> = emptyList()
+)
+
+data class MenuItem(
+    val name: String,
+    val price: Double,
+    val description: String,
     val imageUrl: String
 )
 

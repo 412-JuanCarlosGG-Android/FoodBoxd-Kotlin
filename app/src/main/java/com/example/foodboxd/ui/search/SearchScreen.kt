@@ -31,6 +31,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -39,6 +40,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.Icon
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -53,10 +55,11 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.foodboxd.ui.theme.FoodboxdTheme
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.foodboxd.model.Restaurant
+import com.example.foodboxd.ui.components.RestaurantImage
 import com.example.foodboxd.ui.theme.Neutral150
 import com.example.foodboxd.ui.theme.Neutral200
 import com.example.foodboxd.ui.theme.Neutral300
@@ -64,34 +67,18 @@ import com.example.foodboxd.ui.theme.Neutral600
 import com.example.foodboxd.ui.theme.Neutral950
 import com.example.foodboxd.ui.theme.YellowPrimary
 
-private data class FakeRestaurant(
-    val name: String,
-    val category: String,
-    val rating: String,
-    val priceRange: String,
-    val deliveryTime: String,
-    val location: String
-)
-
-private val fakeRestaurants = listOf(
-    FakeRestaurant("La Trattoria", "Italiana", "4.8", "$$", "20-30 min", "Centro Histórico"),
-    FakeRestaurant("Sushi Zen", "Japonesa", "4.7", "$$$", "25-40 min", "Polanco"),
-    FakeRestaurant("Burger Lab", "Americana", "4.5", "$$", "15-25 min", "Roma Norte"),
-    FakeRestaurant("Taco Fiesta", "Mexicana", "4.3", "$", "10-20 min", "Coyoacán"),
-    FakeRestaurant("Green Garden", "Vegana", "4.6", "$$", "20-35 min", "Condesa"),
-    FakeRestaurant("Pasta Mia", "Italiana", "4.4", "$$", "25-35 min", "Napoles"),
-    FakeRestaurant("Dragon Palace", "China", "4.2", "$", "30-45 min", "Doctores"),
-    FakeRestaurant("El Asador", "Argentina", "4.9", "$$$", "20-30 min", "Lomas"),
-)
-
-private val categories = listOf("Todo", "Pizza", "Sushi", "Burgers", "Tacos", "Pasta", "Vegano", "Postres")
 private val priceOptions = listOf("$", "$$", "$$$", "$$$$")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SearchScreen(modifier: Modifier = Modifier) {
-    var query by remember { mutableStateOf("") }
-    var selectedCategory by remember { mutableStateOf("Todo") }
+fun SearchScreen(
+    modifier: Modifier = Modifier,
+    viewModel: SearchViewModel = viewModel(),
+    onRestaurantClick: (String) -> Unit = {}
+) {
+    val state by viewModel.uiState.collectAsState()
+
+    // Filtros de precio / calificación: se aplican en cliente sobre el resultado.
     var selectedPrice by remember { mutableStateOf<String?>(null) }
     var minRating by remember { mutableIntStateOf(0) }
     var showSheet by remember { mutableStateOf(false) }
@@ -100,9 +87,9 @@ fun SearchScreen(modifier: Modifier = Modifier) {
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    val results = fakeRestaurants.filter { restaurant ->
-        (selectedCategory == "Todo" || restaurant.category.equals(selectedCategory, ignoreCase = true)) &&
-        (query.isBlank() || restaurant.name.contains(query, ignoreCase = true))
+    val results = state.results.filter { restaurant ->
+        (selectedPrice == null || restaurant.priceRange == selectedPrice) &&
+        (minRating == 0 || restaurant.rating >= minRating)
     }
 
     Column(
@@ -111,9 +98,9 @@ fun SearchScreen(modifier: Modifier = Modifier) {
             .background(Color.White)
     ) {
         SearchHeader(
-            query = query,
-            onQueryChange = { query = it },
-            onClearQuery = { query = "" },
+            query = state.query,
+            onQueryChange = viewModel::onQueryChange,
+            onClearQuery = viewModel::clearQuery,
             onFilterClick = {
                 sheetPrice = selectedPrice
                 sheetRating = minRating
@@ -122,9 +109,9 @@ fun SearchScreen(modifier: Modifier = Modifier) {
         )
 
         CategoryChips(
-            categories = categories,
-            selectedCategory = selectedCategory,
-            onCategorySelect = { selectedCategory = it }
+            categories = state.categories,
+            selectedCategory = state.selectedCategory,
+            onCategorySelect = viewModel::onCategorySelected
         )
 
         if (selectedPrice != null || minRating > 0) {
@@ -136,10 +123,32 @@ fun SearchScreen(modifier: Modifier = Modifier) {
             )
         }
 
-        if (results.isEmpty()) {
-            SearchNoResults(query = query, onClear = { query = "" })
-        } else {
-            SearchResultsList(results = results, count = results.size)
+        when {
+            state.isLoading -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = YellowPrimary)
+                }
+            }
+            state.error != null -> {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(text = state.error!!, color = Color.Red)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Button(
+                            onClick = viewModel::retry,
+                            colors = ButtonDefaults.buttonColors(containerColor = YellowPrimary)
+                        ) {
+                            Text("Reintentar", color = Neutral950, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+            results.isEmpty() -> SearchNoResults(query = state.query, onClear = viewModel::clearQuery)
+            else -> SearchResultsList(
+                results = results,
+                count = results.size,
+                onRestaurantClick = onRestaurantClick
+            )
         }
     }
 
@@ -354,7 +363,11 @@ private fun FilterPill(text: String, onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun SearchResultsList(results: List<FakeRestaurant>, count: Int) {
+private fun SearchResultsList(
+    results: List<Restaurant>,
+    count: Int,
+    onRestaurantClick: (String) -> Unit
+) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 24.dp)
@@ -367,19 +380,22 @@ private fun SearchResultsList(results: List<FakeRestaurant>, count: Int) {
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
         }
-        items(results) { restaurant ->
-            RestaurantSearchCard(restaurant = restaurant)
+        items(results, key = { it.id }) { restaurant ->
+            RestaurantSearchCard(
+                restaurant = restaurant,
+                onClick = { onRestaurantClick(restaurant.id) }
+            )
         }
     }
 }
 
 @Composable
-private fun RestaurantSearchCard(restaurant: FakeRestaurant) {
+private fun RestaurantSearchCard(restaurant: Restaurant, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 6.dp)
-            .clickable { },
+            .clickable { onClick() },
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -388,11 +404,12 @@ private fun RestaurantSearchCard(restaurant: FakeRestaurant) {
                 .fillMaxWidth()
                 .padding(12.dp)
         ) {
-            Box(
+            RestaurantImage(
+                url = restaurant.imageUrl,
+                contentDescription = restaurant.name,
                 modifier = Modifier
                     .size(72.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color.LightGray)
             )
 
             Spacer(modifier = Modifier.width(12.dp))
@@ -427,7 +444,7 @@ private fun RestaurantSearchCard(restaurant: FakeRestaurant) {
                         modifier = Modifier.size(14.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = restaurant.rating, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    Text(text = restaurant.rating.toString(), fontWeight = FontWeight.Bold, fontSize = 12.sp)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(text = "• 🕒 ${restaurant.deliveryTime}", color = Color.Gray, fontSize = 12.sp)
                 }
@@ -460,16 +477,18 @@ private fun SearchNoResults(query: String, onClear: () -> Unit) {
             Text(text = "🔍", fontSize = 48.sp)
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "Sin resultados para",
+                text = if (query.isBlank()) "No hay restaurantes" else "Sin resultados para",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
-            Text(
-                text = "\"$query\"",
-                color = YellowPrimary,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleMedium
-            )
+            if (query.isNotBlank()) {
+                Text(
+                    text = "\"$query\"",
+                    color = YellowPrimary,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
             Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = "Intenta con otro nombre o ajusta los filtros",
@@ -583,13 +602,5 @@ private fun FilterSheet(
                 Text("Aplicar", color = Neutral950, fontWeight = FontWeight.Bold)
             }
         }
-    }
-}
-
-@Preview(showBackground = true)
-@Composable
-private fun SearchScreenPreview() {
-    FoodboxdTheme {
-        SearchScreen()
     }
 }

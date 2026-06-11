@@ -8,7 +8,9 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.foodboxd.di.ServiceLocator
 import com.example.foodboxd.ui.auth.LoginScreen
+import com.example.foodboxd.ui.auth.RegisterScreen
 import com.example.foodboxd.ui.main.MainScreen
 
 /**
@@ -16,37 +18,65 @@ import com.example.foodboxd.ui.main.MainScreen
  */
 object AppRoutes {
     const val LOGIN = "login"
+    const val REGISTER = "register"
     const val MAIN = "main"
 }
 
 /**
- * Navegación raíz: controla el flujo entre el login y el contenedor principal
- * (que a su vez tiene su propia barra de navegación inferior).
+ * Navegación raíz: controla el flujo entre autenticación (login/registro) y el
+ * contenedor principal (que a su vez tiene su propia barra de navegación inferior).
+ *
+ * Si ya existe una sesión guardada se entra directamente a la app.
  */
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
+    val startDestination = if (ServiceLocator.repository.session.isLoggedIn) {
+        AppRoutes.MAIN
+    } else {
+        AppRoutes.LOGIN
+    }
 
     NavHost(
         navController = navController,
-        startDestination = AppRoutes.LOGIN,
+        startDestination = startDestination,
     ) {
         composable(AppRoutes.LOGIN) {
             Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                 LoginScreen(
                     modifier = Modifier.padding(innerPadding),
-                    onSignInClick = {
+                    onLoginSuccess = {
                         navController.navigate(AppRoutes.MAIN) {
                             // Saca el login del back stack para que el botón "atrás"
                             // no vuelva a la pantalla de inicio de sesión.
                             popUpTo(AppRoutes.LOGIN) { inclusive = true }
                         }
                     },
+                    onSignUpClick = { navController.navigate(AppRoutes.REGISTER) },
+                )
+            }
+        }
+        composable(AppRoutes.REGISTER) {
+            Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                RegisterScreen(
+                    modifier = Modifier.padding(innerPadding),
+                    onRegisterSuccess = {
+                        navController.navigate(AppRoutes.MAIN) {
+                            popUpTo(AppRoutes.LOGIN) { inclusive = true }
+                        }
+                    },
+                    onBackToLogin = { navController.popBackStack() },
                 )
             }
         }
         composable(AppRoutes.MAIN) {
-            MainScreen()
+            MainScreen(
+                onLogout = {
+                    navController.navigate(AppRoutes.LOGIN) {
+                        popUpTo(AppRoutes.MAIN) { inclusive = true }
+                    }
+                }
+            )
         }
     }
 }
