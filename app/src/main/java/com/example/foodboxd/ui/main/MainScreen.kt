@@ -28,6 +28,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.foodboxd.ui.detail.RestaurantDetailScreen
 import com.example.foodboxd.ui.home.HomeScreen
 import com.example.foodboxd.ui.profile.ProfileScreen
+import com.example.foodboxd.ui.search.SearchScreen
 import com.example.foodboxd.ui.theme.Neutral950
 import com.example.foodboxd.ui.theme.YellowPrimary
 import com.example.foodboxd.ui.top.TopRestaurantsScreen
@@ -102,7 +103,7 @@ fun MainScreen() {
                     onRestaurantClick = { navController.navigate("detail") }
                 )
             }
-            composable("search") { PlaceholderScreen("Buscar") }
+            composable("search") { SearchScreen() }
             composable("favorites") { PlaceholderScreen("Favoritos") }
             composable("profile") { ProfileScreen() }
             composable("detail") { RestaurantDetailScreen() }
